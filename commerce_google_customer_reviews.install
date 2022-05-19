@@ -1,0 +1,18 @@
+<?php
+
+/**
+ * @file
+ * Install and uninstall file.
+ */
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Delete all variables set in Drupal.
+ */
+function commerce_google_customer_reviews_uninstall() {
+  \Drupal::config('commerce_google_customer_reviews.settings')->clear('commerce_google_customer_reviews_enabled')->save();
+  \Drupal::config('commerce_google_customer_reviews.settings')->clear('commerce_google_customer_reviews_merchant_id')->save();
+  \Drupal::config('commerce_google_customer_reviews.settings')->clear('commerce_google_customer_reviews_badge_location')->save();
+  \Drupal::config('commerce_google_customer_reviews.settings')->clear('commerce_google_customer_reviews_opt_in_location')->save();
+}

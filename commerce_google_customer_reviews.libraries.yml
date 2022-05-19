@@ -1,0 +1,3 @@
+commerce_google_customer_reviews:
+  js:
+    libraries/js.js : {}

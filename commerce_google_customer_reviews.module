@@ -1,0 +1,288 @@
+<?php
+
+/**
+ * @file
+ * Module file.
+ */
+
+// Add Commerce Checkout Functions.
+module_load_include('inc', 'commerce_google_customer_reviews', 'commerce_google_customer_reviews_commerce_checkout');
+
+/**
+ * Implements hook_help().
+ */
+function commerce_google_customer_reviews_help($path, $arg) {
+  $ret_val = '';
+  switch ($path) {
+    case 'admin/help#commerce_google_customer_reviews':
+      $ret_val = '<h3>' . t('Google Customer Reviews for Drupal Commerce') . '</h3>';
+      $ret_val .= '<p>' . t('This module adds the Google Customer Reviews capabilities to your Drupal Commerce Store') . '</p>';
+  }
+  return $ret_val;
+}
+
+/**
+ * Implements hook_page_attachments().
+ */
+function commerce_google_customer_reviews_page_attachments(array &$page) {
+  $gcr_enabled = \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_enabled');
+  if ($gcr_enabled) {
+
+$script_merchant_id = \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_merchant_id');
+$script_merchant_badge_location = \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_badge_location');
+
+    // Script placement for Drupal.
+    $gcr_placement = 'footer';
+
+    // Build script code to inject to Drupal.
+    $gcr_badge_script = 'window.renderBadge = function() {var ratingBadgeContainer = document.createElement("div");document.body.appendChild(ratingBadgeContainer);window.gapi.load(\'ratingbadge\', function() {window.gapi.ratingbadge.render(ratingBadgeContainer, {"merchant_id": ';
+    $gcr_badge_script .= $script_merchant_id;
+    $gcr_badge_script .= ', "position": "';
+    $gcr_badge_script .= $script_merchant_badge_location;
+    $gcr_badge_script .= '"});});}';
+
+    $gcr_inject_options = array(
+      'type' => 'external',
+      'defer' => TRUE,
+      'async' => TRUE,
+      'scope' => $gcr_placement,
+    );
+
+    $page['#attached']['library'][] = 'libraries/js.js';
+
+    $gcr_badge_script_2 = array(
+      'scope' => $gcr_placement,
+      'type' => 'inline'
+    );
+
+
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+
+function commerce_google_customer_reviews_form_commerce_checkout_form_complete_alter(&$form, FormStateInterface &$form_state, $form_id) {
+  $gcr_enabled = \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_enabled');
+
+  if ($gcr_enabled) {
+    $script_merchant_id = \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_merchant_id');
+    $script_shipping_days = \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_estimated_shipping_days');
+    $exclude_weekends = \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_exclude_weekends');
+
+    $order = $form_state['order'];
+
+    // Load Profile ID from this order's customer profile.
+    $customer_billing_id = $order->commerce_customer_billing['und'][0]['profile_id'];
+    // Customer Shipping Information from Profile ID.
+    $customer_billing_address = commerce_customer_profile_load($customer_billing_id);
+    $customer_billing_country = $customer_billing_address->commerce_customer_address['und'][0]['country'];
+
+    // Gather order and merchant information.
+    $merchant_order_id = $order->order_id;
+
+    $customer_email = $order->mail;
+    $customer_country = $customer_billing_country;
+    // When order is expected at the customer.
+    if ($exclude_weekends) {
+      $order_est_delivery_date = date('Y-m-d', strtotime(" + {$script_shipping_days} weekdays"));
+    } else {
+      $order_est_delivery_date = date('Y-m-d', strtotime(" + {$script_shipping_days} days"));
+    }
+
+    $gcr_checkout_script = 'window.renderOptIn = function() {window.gapi.load(\'surveyoptin\', function() {window.gapi.surveyoptin.render({"merchant_id": ';
+    $gcr_checkout_script .= $script_merchant_id;
+    $gcr_checkout_script .= ',';
+    $gcr_checkout_script .= '"order_id": "';
+    $gcr_checkout_script .= $merchant_order_id;
+    $gcr_checkout_script .= '",';
+    $gcr_checkout_script .= '"email": "';
+    $gcr_checkout_script .= $customer_email;
+    $gcr_checkout_script .= '",';
+    $gcr_checkout_script .= '"delivery_country": "';
+    $gcr_checkout_script .= $customer_country;
+    $gcr_checkout_script .= '",';
+    $gcr_checkout_script .= '"estimated_delivery_date": "';
+    $gcr_checkout_script .= $order_est_delivery_date;
+    $gcr_checkout_script .= '"});});}';
+
+    // Script Placement for Drupal.
+    $gcr_checkout_placement = 'footer';
+
+    // Build an options array for the externally loaded js from Google.
+    $gcr_checkout_inject_options = array(
+      'type' => 'external',
+      'defer' => TRUE,
+      'async' => TRUE,
+      'scope' => $gcr_checkout_placement,
+    );
+    // @FIXME
+// The Assets API has totally changed. CSS, JavaScript, and libraries are now
+// attached directly to render arrays using the #attached property.
+//
+//
+// @see https://www.drupal.org/node/2169605
+// @see https://www.drupal.org/node/2408597
+// drupal_add_js('https://apis.google.com/js/platform.js?onload=renderOptIn', $gcr_checkout_inject_options);
+
+    // @FIXME
+// The Assets API has totally changed. CSS, JavaScript, and libraries are now
+// attached directly to render arrays using the #attached property.
+//
+//
+// @see https://www.drupal.org/node/2169605
+// @see https://www.drupal.org/node/2408597
+// drupal_add_js($gcr_checkout_script, array('scope' => $gcr_checkout_placement, 'type' => 'inline'));
+
+  }
+}
+
+/**
+ * Module settings menu callback function.
+ *
+ * Form field creation for basic Google Customer Reviews information.
+ */
+function commerce_google_customer_reviews_admin_settings_form(array &$form) {
+
+  $form['overview'] = array(
+    '#markup' => t('Place your company specific information for your Google Customer Reviews here.'),
+    '#prefix' => '<p><strong>',
+    '#suffix' => '</strong></p>',
+  );
+
+  $form['commerce_google_customer_reviews'] = array(
+    '#title' => t('Enable Google Customer Reviews'),
+    '#description' => t('When enabled, the Google Customer Reviews badge will be enabled, as well as order reviews'),
+    '#type' => 'checkbox',
+    '#default_value' => \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_enabled'),
+  );
+
+  $form['merchant_settings'] = array(
+    '#title' => t('Merchant Information'),
+    '#description' => t('Please retrieve this from the Google Merchant Account.'),
+    '#type' => 'fieldset',
+    '#collapsable' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['merchant_settings']['merchant_id'] = array(
+    '#title' => t('Google Merchant ID'),
+    '#description' => t('Place your Google Merchant ID here.'),
+    '#type' => 'textfield',
+    '#size' => '15',
+    '#placeholder' => '123456789',
+    '#required' => FALSE,
+    '#default_value' => \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_merchant_id'),
+  );
+
+  $form['badge_settings'] = array(
+    '#title' => t('Badge Information'),
+    '#description' => t('Please retrieve this from the Google Customer Reviews integration setup page.'),
+    '#type' => 'fieldset',
+    '#collapsable' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $badge_position_options = array(
+    'BOTTOM_RIGHT' => t('Bottom Right'),
+    'BOTTOM_LEFT' => t('Bottom Left'),
+    'USER_DEFINED' => t('User Defined'),
+  );
+
+  $form['badge_settings']['badge_position'] = array(
+    '#title' => t('Badge Position'),
+    '#description' => t('Where would you like your badge to be placed on your website.'),
+    '#type' => 'select',
+    '#options' => $badge_position_options,
+    '#default_value' => \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_badge_location'),
+  );
+
+  $form['review_settings'] = array(
+    '#title' => t('Review Settings'),
+    '#description' => t('See the "Integrate the survey opt-in module" page on Google to view these settings.'),
+    '#type' => 'fieldset',
+    '#collapsable' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $reviews_opt_in_style = array(
+    'CENTER_DIALOG' => t('Center Dialog: Displayed as a dialog box in the center of the view.'),
+    'BOTTOM_RIGHT_DIALOG' => t('Bottom Right Dialog: Displayed as a dialog box at the bottom right of the view.'),
+    'BOTTOM_LEFT_DIALOG' => t('Bottom Left Dialog: Displayed as a dialog box at the bottom left of the view.'),
+    'TOP_RIGHT_DIALOG' => t('Top Right Dialog: Displayed as a dialog box at the top right of the view.'),
+    'TOP_LEFT_DIALOG' => t('Top Left Dialog: Displayed as a dialog box at the top left of the view.'),
+    'BOTTOM_TRAY' => t('Bottom Tray: Displayed in the bottom of the view.'),
+  );
+
+  $form['review_settings']['opt_in_location'] = array(
+    '#title' => t('Opt-In Location'),
+    '#description' => t("Specifies how the opt-in module's dialog box is displayed."),
+    '#type' => 'radios',
+    '#options' => $reviews_opt_in_style,
+    '#default_value' => \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_opt_in_location'),
+  );
+
+  $form['review_settings']['estimated_shipping_days'] = array(
+    '#title' => t('Estimated Shipping Days'),
+    '#description' => t('By default, how many days after an order will the product deliver?'),
+    '#type' => 'textfield',
+    '#size' => '5',
+    '#placeholder' => '14',
+    '#required' => FALSE,
+    '#default_value' => \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_estimated_shipping_days'),
+  );
+
+ $form['review_settings']['estimated_shipping_days_exclude_weekends'] = array(
+     '#title' => t('Exclude Weekends in Shipping Days'),
+     '#description' => t('This will make your shipping estimate exclude Saturday and Sunday.'),
+     '#type' => 'checkbox',
+     '#default_value' => \Drupal::config('commerce_google_customer_reviews.settings')->get('commerce_google_customer_reviews_estimated_shipping_days_exclude_weekends'),
+   );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save Settings'),
+  );
+
+  return $form;
+}
+
+/**
+ * Implements form validate callback.
+ */
+function commerce_google_customer_reviews_admin_settings_form_validate($form, &$form_state) {
+  $merchant_id_validator = '/^[0-9]+/';
+  $merchant_id = $form_state['values']['merchant_id'];
+
+  // Validate Merchant ID to integers in a row with no spaces.
+  if (!preg_match($merchant_id_validator, $merchant_id)) {
+    $form_state->setErrorByName('merchant_id', t('Invalid Merchant ID, Please check your work.'));
+  }
+
+  // Validate Estimated Shipping Days is an integer of days.
+  $estimated_shipping_days_validator = '/^[0-9]+/';
+  $estimated_shipping_days = $form_state['values']['estimated_shipping_days'];
+
+  if (!preg_match($estimated_shipping_days_validator, $estimated_shipping_days)) {
+    $form_state->setErrorByName('estimated_shipping_days', t('Invalid Shipping Days, please use a number to add to the days from the order date.'));
+  }
+}
+
+/**
+ * Implements form submission handler.
+ */
+function commerce_google_customer_reviews_admin_settings_form_submit($form, &$form_state) {
+  // Rebuild the form.
+  $form_state['rebuild'] = TRUE;
+
+  // Save Commerce Google Trusted Store Variables.
+  \Drupal::configFactory()->getEditable('commerce_google_customer_reviews.settings')->set('commerce_google_customer_reviews_enabled', $form_state['values']['commerce_google_customer_reviews'])->save();
+  \Drupal::configFactory()->getEditable('commerce_google_customer_reviews.settings')->set('commerce_google_customer_reviews_merchant_id', $form_state['values']['merchant_id'])->save();
+  \Drupal::configFactory()->getEditable('commerce_google_customer_reviews.settings')->set('commerce_google_customer_reviews_badge_location', $form_state['values']['badge_position'])->save();
+  \Drupal::configFactory()->getEditable('commerce_google_customer_reviews.settings')->set('commerce_google_customer_reviews_opt_in_location', $form_state['values']['opt_in_location'])->save();
+  \Drupal::configFactory()->getEditable('commerce_google_customer_reviews.settings')->set('commerce_google_customer_reviews_estimated_shipping_days', $form_state['values']['estimated_shipping_days'])->save();
+  \Drupal::configFactory()->getEditable('commerce_google_customer_reviews.settings')->set('commerce_google_customer_reviews_estimated_shipping_days_exclude_weekends', $form_state['values']['estimated_shipping_days_exclude_weekends'])->save();
+
+}
+

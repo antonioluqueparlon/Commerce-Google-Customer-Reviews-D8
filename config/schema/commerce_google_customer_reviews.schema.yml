@@ -1,0 +1,18 @@
+commerce_google_customer_reviews.settings:
+  type: mapping
+  label: Configuración
+  mapping:
+    commerce_google_customer_reviews_enabled:
+      type: integer
+    commerce_google_customer_reviews_exclude_weekends:
+      type: integer
+    commerce_google_customer_reviews_merchant_id:
+      type: integer
+    commerce_google_customer_reviews_estimated_shipping_days:
+      type: integer
+    commerce_google_customer_reviews_badge_location:
+      type: string
+    commerce_google_customer_reviews_opt_in_location:
+      type: string
+    commerce_google_customer_reviews_estimated_shipping_days_exclude_weekends:
+      type: integer

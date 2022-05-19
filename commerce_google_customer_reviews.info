@@ -1,0 +1,15 @@
+name: Commerce Google Customer Reviews
+description: Integrates Google Customer Reviews with Drupal Commerce.
+package: Commerce (contrib)
+type: module
+dependencies:
+ - commerce
+core: 8.x
+php: '5.5'
+
+; Information added by Drupal.org packaging script on 2017-07-20
+version = "7.x-1.2"
+core = "8.x"
+project = "commerce_google_customer_reviews"
+datestamp = "1500560180"
+

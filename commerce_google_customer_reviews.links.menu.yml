@@ -1,0 +1,5 @@
+commerce_google_customer_reviews.admin_settings_form:
+  route_name: commerce_google_customer_reviews.admin_settings_form
+  title: 'Google Customer Reviews'
+  description: 'Administer Google Customer Reviews'
+  parent: commerce.configuration
